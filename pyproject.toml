@@ -20,25 +20,26 @@ classifiers=[
 
 [tool.poetry.dependencies]
 python = "^3.7"
-requests = "^2.26.0"
+requests = "*"
 backoff = "^1.11.1"
 tqdm = "^4.65.0"
-mock = {version = "^4.0.3", optional = true}
-selenium = {version = "^4.1.0", optional = true}
-bump2version = {version = "^1.0.1", optional = true}
-pytest = {version = "^6.2.5", optional = true}
-pytest-cov = {version = "^3.0.0", optional = true}
-asserts = {version = "^0.11.1", optional = true}
 
-[tool.poetry.extras]
-dev = ["bump2version"]
-test = [
-	"pytest",
-	"pytest-cov",
-	"mock",
-	"asserts",
-	"selenium",
-]
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.test.dependencies]
+mock = "^4.0.3"
+selenium = "^4.1.0"
+pytest = "*"
+pytest-cov = "*"
+asserts = "*"
+
+[tool.poetry.group.dev.dependencies]
+bump2version = "*"
+twine = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
