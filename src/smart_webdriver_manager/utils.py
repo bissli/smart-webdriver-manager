@@ -46,7 +46,7 @@ def unpack_zip(zip_path):
 @contextmanager
 def download_file(url) -> Path:
     """Better download"""
-    name = Path(urlparse(url).path).name
+    name = Path(urlparse(unquote(url)).path).name
     with mktempdir() as tmpdir:
 
         @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_time=30)
