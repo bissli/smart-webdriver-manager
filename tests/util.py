@@ -17,8 +17,8 @@ def run_chrome_helper(driver_path, browser_path, user_data_dir):
     service = Service(executable_path=driver_path)
     driver = webdriver.Chrome(service=service, options=options)
     try:
-        driver.get("http://duckduckgo.com")
-        driver.find_element(By.ID, "search_form_input_homepage")
+        driver.get('https://chromiumdash.appspot.com/')
+        driver.find_element(By.CLASS_NAME, "title-wrapper")
     finally:
         driver.quit()
     time.sleep(3)
