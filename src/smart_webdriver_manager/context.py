@@ -115,15 +115,18 @@ class SmartChromeContextManager(SmartContextManager):
     @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_time=30)
     def get_browser_release(self, version: int = 0) -> (Version, Version):
         """Find latest corresponding chromium relese to specified/latest chromedriver
-        - If the browser does not have an associated driver (revision version too high),
-          this will iterate down to the latest supported browser
         """
-        url_repo = "https://omahaproxy.appspot.com"
         release = self.get_driver_release(version)
-        revision_url = f"{url_repo}/deps.json?version={str(release)}"
-        revision = int(json.loads(requests.get(revision_url).content.decode())["chromium_base_position"])
 
-        while True:
+        revision_url = 'https://chromiumdash.appspot.com/fetch_milestones?only_branched=true'
+        revisions = json.loads(requests.get(revision_url).content.decode())
+        if not version:
+            revisions = sorted(revisions, key=lambda x: int(x['milestone']), reverse=True)
+        else:
+            revisions = [d for d in revisions if int(d['milestone']) == version]
+        revision = int(revisions[0]['chromium_main_branch_position'])
+
+        while 1:
             logger.debug(f"Trying revision {revision} ... ")
             browser_zip = self.browser_zip(revision)
             url_browser_zip = self.url_browser_zip.format(revision, browser_zip)

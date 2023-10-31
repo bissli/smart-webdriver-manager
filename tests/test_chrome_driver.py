@@ -107,19 +107,19 @@ def test_can_get_browser_for_platform(platform):
 def test_order_doesnt_matter():
     print("=test_order_doesnt_matter")
     with mktempdir() as tmpdir:
-        print()
+        print("> Driver->Browser->Data")
         cdm = ChromeDriverManager(base_path=tmpdir)
         Path(cdm.get_driver()).resolve(strict=True)
         Path(cdm.get_browser()).resolve(strict=True)
         Path(cdm.get_browser_user_data()).resolve(strict=True)
     with mktempdir() as tmpdir:
-        print()
+        print("> Data->Browser->Driver")
         cdm = ChromeDriverManager(base_path=tmpdir)
         Path(cdm.get_browser_user_data()).resolve(strict=True)
         Path(cdm.get_browser()).resolve(strict=True)
         Path(cdm.get_driver()).resolve(strict=True)
     with mktempdir() as tmpdir:
-        print()
+        print("> Data->Driver-Browser")
         cdm = ChromeDriverManager(base_path=tmpdir)
         Path(cdm.get_browser_user_data()).resolve(strict=True)
         Path(cdm.get_driver()).resolve(strict=True)

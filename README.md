@@ -143,13 +143,13 @@ The default directory for the cache is as follows:
 
 TODO
 ----
-- [ ] Migrate off omahaproxy.appspot.com (discontinued). See https://groups.google.com/a/chromium.org/g/chromium-dev/c/uH-nFrOLWtE?pli=1 
-- [x] Change the user data directory to fall under the major version, not release (see illustration above).
 - [ ] Complete support for Mac. Parse .app directory and create workaround for Gatekeeper.
-- [x] Decide whether symlinks have value, remove code if not. (REMOVED)
 - [ ] Complete the cache clear/remove methods. Write methods to delete the data directory or parts of the cache.
 - [ ] Add Firefox as another supported platform. Current support is limited to Chromium/Chromedriver.
 - [ ] Ability to recover if part of the cache is missing (ie a browser not there but browsers.json says so) (check path exists)
+- [x] Change the user data directory to fall under the major version, not release (see illustration above).
+- [x] Decide whether symlinks have value, remove code if not. (REMOVED)
+- [x] Migrate off omahaproxy.appspot.com (discontinued). See https://groups.google.com/a/chromium.org/g/chromium-dev/c/uH-nFrOLWtE?pli=1
 
 Contributing
 ------------
