@@ -1,17 +1,18 @@
+import logging
 import os
-import zipfile
+import platform
 import shutil
 import tempfile
-import requests
-import backoff
-import platform
-import tqdm
+import zipfile
 from contextlib import contextmanager
-from urllib.parse import urlparse, unquote
 from pathlib import Path
-from packaging.version import parse, Version
+from urllib.parse import unquote, urlparse
 
-from . import logger
+import backoff
+import requests
+import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 class LinuxZipFileWithPermissions(zipfile.ZipFile):
@@ -33,12 +34,12 @@ class LinuxZipFileWithPermissions(zipfile.ZipFile):
 
 def unpack_zip(zip_path):
     """Unzip zip to same diretory"""
-    zip_class = zipfile.ZipFile if platform.system() == "Windows" else LinuxZipFileWithPermissions
+    zip_class = zipfile.ZipFile if platform.system() == 'Windows' else LinuxZipFileWithPermissions
     archive = zip_class(zip_path)
     try:
         archive.extractall(Path(zip_path).parent)
     except Exception as e:
-        if e.args[0] not in [26, 13] and e.args[1] not in ["Text file busy", "Permission denied"]:
+        if e.args[0] not in {26, 13} and e.args[1] not in {'Text file busy', 'Permission denied'}:
             raise e
     return archive.namelist()
 
@@ -55,7 +56,7 @@ def download_file(url) -> Path:
                 save_path = tmpdir.joinpath(name)
                 total = int(r.headers.get('content-length', 0))
                 chunk = 16 * 1024 * 1024
-                with open(save_path, "wb") as f, tqdm.tqdm(total=total, desc=name, unit='B', unit_scale=True) as p:
+                with open(save_path, 'wb') as f, tqdm.tqdm(total=total, desc=name, unit='B', unit_scale=True) as p:
                     while buf := r.raw.read(chunk):
                         f.write(buf)
                         p.update(len(buf))
@@ -75,6 +76,6 @@ def mktempdir() -> Path:
         @backoff.on_exception(backoff.expo, shutil.Error, max_time=10)
         def remove():
             shutil.rmtree(tmp, ignore_errors=False)
-            logger.debug(f"Removed {tmp}")
+            logger.debug(f'Removed {tmp}')
 
         remove()

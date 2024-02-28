@@ -1,5 +1,4 @@
 import pytest
-
 from smart_webdriver_manager import ChromeDriverManager
 from util import run_chrome_helper
 
@@ -32,5 +31,5 @@ def test_install():
     run_chrome_helper(driver_path, browser_path, user_data_path)
 
 
-if __name__ == "__main__":
-    pytest.main(args=["-s", __file__])
+if __name__ == '__main__':
+    pytest.main(args=['-s', __file__])

@@ -1,16 +1,17 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from functools import cache
 
 from smart_webdriver_manager.context import SmartChromeContextManager
 
-from . import logger
+logger = logging.getLogger(__name__)
 
 
 class DriverManager(metaclass=ABCMeta):
     def __init__(self, version, base_path):
         self._base_path = base_path
         self._version = version
-        logger.info("Running driver manager")
+        logger.info('Running driver manager')
 
     @abstractmethod
     def get_driver(self) -> str:
