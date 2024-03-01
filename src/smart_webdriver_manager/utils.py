@@ -52,6 +52,7 @@ def download_file(url) -> Path:
 
         @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_time=30)
         def get():
+            logger.info(f'Downloading {url}')
             with requests.get(url, stream=True) as r:
                 save_path = tmpdir.joinpath(name)
                 total = int(r.headers.get('content-length', 0))
