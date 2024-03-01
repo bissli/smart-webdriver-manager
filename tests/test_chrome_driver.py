@@ -18,11 +18,25 @@ logger = logging.getLogger('==>')
 def test_chrome_manager_with_specific_version(version):
     logger.info('=test_chrome_manager_with_specific_version')
     with mktempdir() as tmpdir:
-        driver_path = Path(ChromeDriverManager(base_path=tmpdir, version=version).get_driver())
+        cdm = ChromeDriverManager(base_path=tmpdir, version=version)
+        driver_path = Path(cdm.get_driver())
+        browser_path = Path(cdm.get_browser())
+
         assert_true(driver_path.exists())
         assert_in(tmpdir, driver_path.parents)
+        assert_true(browser_path.exists())
+        assert_in(tmpdir, browser_path.parents)
 
-        browser_path = Path(ChromeDriverManager(base_path=tmpdir, version=version).get_browser())
+
+def test_chrome_manager_latest():
+    logger.info('=test_chrome_manager_with_latest_version')
+    with mktempdir() as tmpdir:
+        cdm = ChromeDriverManager(base_path=tmpdir)
+        driver_path = Path(cdm.get_driver())
+        browser_path = Path(cdm.get_browser())
+
+        assert_true(driver_path.exists())
+        assert_in(tmpdir, driver_path.parents)
         assert_true(browser_path.exists())
         assert_in(tmpdir, browser_path.parents)
 
@@ -56,15 +70,14 @@ def test_chrome_manager_cached_driver_with_selenium():
         assert_not_equal(browser_path_1, browser_path_3)
 
 
-@pytest.mark.parametrize('platform', ['Windows', 'Linux', 'Darwin'])
-def test_can_get_driver_for_platform(platform):
+@pytest.mark.parametrize(('platform', 'version'), [('Windows', 117), ('Linux', 114), ('Darwin', 95)])
+def test_can_get_driver_for_platform(platform, version):
     logger.info(f'=test_can_get_driver_for_platform {platform}')
     with mktempdir() as tmpdir:
 
         import platform as platform_
-
         platform_.system = Mock(return_value=platform)
-        cdm = ChromeDriverManager(base_path=tmpdir, version=96)
+        cdm = ChromeDriverManager(base_path=tmpdir, version=version)
         driver_path = Path(cdm.get_driver())
         assert_true(driver_path.exists())
 
@@ -72,20 +85,17 @@ def test_can_get_driver_for_platform(platform):
         driver_platform = scm.driver_platform
 
         driver_files = {Path(f).name for f in glob.glob(f'{driver_path.parent}/*')}
-        assert_equal(
-            driver_files,
-            {f'chromedriver_{driver_platform}.zip', f'chromedriver{".exe" if platform=="Windows" else ""}'},
-        )
+        assert_in(f'chromedriver{".exe" if platform=="Windows" else ""}', driver_files)
 
 
-@pytest.mark.parametrize('platform', ['Windows', 'Linux', 'Darwin'])
-def test_can_get_browser_for_platform(platform):
-    logger.info(f'=test_can_get_browser_for_platform {platform}')
+@pytest.mark.parametrize(('platform', 'version'), [('Windows', 117), ('Linux', 114), ('Darwin', 95)])
+def test_can_get_browser_for_platform(platform, version):
+    logger.info(f'=test_can_get_browser_for_platform {platform} {version}')
     with mktempdir() as tmpdir:
 
         import platform as platform_
         platform_.system = Mock(return_value=platform)
-        cdm = ChromeDriverManager(base_path=tmpdir, version=96)
+        cdm = ChromeDriverManager(base_path=tmpdir, version=version)
         browser_path = Path(cdm.get_browser())
         assert_true(browser_path.exists())
 

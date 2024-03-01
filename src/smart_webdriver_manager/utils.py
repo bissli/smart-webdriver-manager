@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urlsplit, urlunsplit
 
 import backoff
 import requests
@@ -80,3 +80,20 @@ def mktempdir() -> Path:
             logger.debug(f'Removed {tmp}')
 
         remove()
+
+
+def url_path_join(*parts):
+    """Normalize url parts and join them with a slash.
+    """
+    schemes, netlocs, paths, queries, fragments = zip(*(urlsplit(part) for part in parts))
+    scheme, netloc, query, fragment = first_of_each(schemes, netlocs, queries, fragments)
+    path = '/'.join(x.strip('/') for x in paths if x)
+    return urlunsplit((scheme, netloc, path, query, fragment))
+
+
+def first_of_each(*sequences):
+    return (next((x for x in sequence if x), '') for sequence in sequences)
+
+
+if __name__ == '__main__':
+    __import__('doctest').testmod(optionflags=4 | 8 | 32)

@@ -25,10 +25,6 @@ class DriverManager(metaclass=ABCMeta):
     def get_browser_user_data(self) -> str:
         pass
 
-    # @abstractmethod
-    # def remove():
-    # pass
-
 
 class ChromeDriverManager(DriverManager):
 
@@ -71,22 +67,3 @@ class ChromeDriverManager(DriverManager):
         browser_release, browser_revision = self._get_browser_helper()
         user_data_path = self._cx.get_browser_user_data(str(browser_release), str(browser_revision))
         return str(user_data_path)
-
-    # def _forfun(self):
-        # # test and remove me
-        # return [
-            # f'driver stats:  {self.get_driver.cache_info()}',
-            # f'browser stats: {self.get_browser.cache_info()}',
-            # f'datadir stats: {self.get_user_data.cache_info()}',
-            # ]
-
-    # def remove(self):
-        # """Needs to remove all the instances from cache (force kill if running)
-        # """
-        # self.get_driver.cache_clear()
-        # self.get_browser.cache_clear()
-        # self.get_user_data.cache_clear()
-        # self._get_browser_helper.cache_clear()
-        # self.__called_driver__ = False
-        # self.__called_browser__ = False
-        # # now remove things
