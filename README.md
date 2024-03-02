@@ -24,8 +24,8 @@ Supported Driver/Platform
 |-------------|--------------|-------------|
 | **Windows** |       x      |      -      |
 | **Linux**   |       x      |      -      |
-| **MacOS**   |       -      |      -      |
 
+I do not plan to support MacOS. Contributions are welcome through pull requests.
 
 Examples
 --------
@@ -145,17 +145,13 @@ The system default directory for the cache is as follows:
 
 - `Windows`: ~/appdata/roaming/swm
 - `Linux`:   ~/.local/share/swm
-- `MacOS`:  ~/Library/Application Support/swm
 
 TODO
 ----
-- [ ] Complete support for MacOS. Parse .app directory and create workaround for Gatekeeper.
 - [ ] Complete the cache clear/remove methods. Write methods to delete the data directory or parts of the cache.
 - [ ] Add Firefox as another supported platform. Current support is limited to Chromium/Chromedriver.
 - [ ] Ability to recover if part of the cache is missing (ie a browser not there but browsers.json says so) (check path exists)
 - [x] Change the user data directory to fall under the major version, not release (see illustration above).
-- [x] Decide whether symlinks have value, remove code if not. (REMOVED)
-- [x] Migrate off omahaproxy.appspot.com (discontinued). See https://groups.google.com/a/chromium.org/g/chromium-dev/c/uH-nFrOLWtE?pli=1
 
 Contributing
 ------------

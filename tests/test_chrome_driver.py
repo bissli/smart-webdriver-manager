@@ -70,7 +70,10 @@ def test_chrome_manager_cached_driver_with_selenium():
         assert_not_equal(browser_path_1, browser_path_3)
 
 
-@pytest.mark.parametrize(('platform', 'version'), [('Windows', 117), ('Linux', 114), ('Darwin', 95)])
+@pytest.mark.parametrize(
+    ('platform', 'version'),
+    [('Windows', 117), ('Linux', 114), ('Windows', 95), ('Linux', 120)],
+)
 def test_can_get_driver_for_platform(platform, version):
     logger.info(f'=test_can_get_driver_for_platform {platform}')
     with mktempdir() as tmpdir:
@@ -88,7 +91,10 @@ def test_can_get_driver_for_platform(platform, version):
         assert_in(f'chromedriver{".exe" if platform=="Windows" else ""}', driver_files)
 
 
-@pytest.mark.parametrize(('platform', 'version'), [('Windows', 117), ('Linux', 114), ('Darwin', 95)])
+@pytest.mark.parametrize(
+    ('platform', 'version'),
+    [('Windows', 117), ('Linux', 114), ('Windows', 95), ('Linux', 120)],
+)
 def test_can_get_browser_for_platform(platform, version):
     logger.info(f'=test_can_get_browser_for_platform {platform} {version}')
     with mktempdir() as tmpdir:
