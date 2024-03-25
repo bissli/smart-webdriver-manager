@@ -141,5 +141,8 @@ class BrowserUserDataCache:
         if not os.path.exists(user_data_path):
             logger.warning(f'{user_data_path} does not exist')
             return
-        shutil.rmtree(user_data_path, ignore_errors=True)
-        logger.info(f'Removed {user_data_path}')
+        try:
+            shutil.rmtree(user_data_path, ignore_errors=False)
+            logger.info(f'Removed {user_data_path}')
+        except OSError as err:
+            logger.exception(err)
