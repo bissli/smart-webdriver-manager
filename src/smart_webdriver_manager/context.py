@@ -216,3 +216,8 @@ class SmartChromeContextManager(SmartContextManager):
         - revision is ignored (data dir is same level as major version)
         """
         return str(self._browser_user_data_cache.get(release, revision))
+
+    def remove_browser_user_data(self, release: str, revision: str):
+        """Remove UserData folder matching release and revision
+        """
+        self._browser_user_data_cache.remove(release, revision)

@@ -25,6 +25,10 @@ class DriverManager(metaclass=ABCMeta):
     def get_browser_user_data(self) -> str:
         pass
 
+    @abstractmethod
+    def remove_browser_user_data(self):
+        pass
+
 
 class ChromeDriverManager(DriverManager):
 
@@ -60,10 +64,15 @@ class ChromeDriverManager(DriverManager):
         browser_path = self._cx.get_browser(str(browser_release), str(browser_revision))
         return str(browser_path)
 
-    @cache
     def get_browser_user_data(self):
         if not self.__called_browser__:
             self.get_browser()
         browser_release, browser_revision = self._get_browser_helper()
         user_data_path = self._cx.get_browser_user_data(str(browser_release), str(browser_revision))
         return str(user_data_path)
+
+    def remove_browser_user_data(self):
+        if not self.__called_browser__:
+            self.get_browser()
+        browser_release, browser_revision = self._get_browser_helper()
+        self._cx.remove_browser_user_data(str(browser_release), str(browser_revision))

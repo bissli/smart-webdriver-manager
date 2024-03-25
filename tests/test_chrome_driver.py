@@ -1,9 +1,10 @@
 import glob
 import logging
+import os
 from pathlib import Path
 
 import pytest
-from asserts import assert_equal, assert_in, assert_not_equal, assert_true
+from asserts import assert_equal, assert_in, assert_not_equal, assert_true, assert_false
 from mock import Mock
 from smart_webdriver_manager import ChromeDriverManager
 from smart_webdriver_manager.context import SmartChromeContextManager
@@ -147,6 +148,15 @@ def test_chrome_uses_data_dir(tempdir):
     browser_path = cdm.get_browser()
     user_data_dir = cdm.get_browser_user_data()
     run_chrome_helper(driver_path, browser_path, user_data_dir)
+
+
+def test_remove_chrome_user_data_dir(tempdir):
+    logger.info('=test_remove_chrome_user_data_dir')
+    cdm = ChromeDriverManager(base_path=tempdir, version=122)
+    user_data_dir = cdm.get_browser_user_data()
+    assert_true(os.path.exists(user_data_dir))
+    cdm.remove_browser_user_data()
+    assert_false(os.path.exists(user_data_dir))
 
 
 if __name__ == '__main__':

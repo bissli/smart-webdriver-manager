@@ -1,8 +1,10 @@
 import datetime
 import json
 import logging
+import os
 import platform
 import re
+import shutil
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
@@ -120,12 +122,24 @@ class BrowserUserDataCache:
     def __init__(self, browser_name, base_path=None):
         self._browser_cache = BrowserCache(browser_name, base_path)
 
-    def get(self, release, revision=None):
+    def _calc_user_data_path(self, release, revision=None):
         browser_path = self._browser_cache.get(release, revision)
         if not browser_path:
             raise AssertionError('get_browser() not yet called')
         user_data_path = Path(*browser_path.parts[: browser_path.parts.index(release) + 1])
         user_data_path = user_data_path.joinpath('UserData')
+        return user_data_path
+
+    def get(self, release, revision=None):
+        user_data_path = self._calc_user_data_path(release, revision)
         user_data_path.mkdir(mode=0o755, exist_ok=True)
         logger.info(f'Got user data {user_data_path} for {self._browser_cache._browser_name}')
         return user_data_path
+
+    def remove(self, release, revision=None):
+        user_data_path = self._calc_user_data_path(release, revision)
+        if not os.path.exists(user_data_path):
+            logger.warning(f'{user_data_path} does not exist')
+            return
+        shutil.rmtree(user_data_path, ignore_errors=True)
+        logger.info(f'Removed {user_data_path}')
