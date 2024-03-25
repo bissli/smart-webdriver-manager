@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "smart-webdriver-manager"
-version = "0.5.0"
+version = "0.6.0"
 description = "A smart webdriver and browser manager"
 readme = "README.md"
 license = "MIT"
