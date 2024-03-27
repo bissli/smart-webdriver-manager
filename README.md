@@ -152,6 +152,7 @@ TODO
 - [ ] Add Firefox as another supported platform. Current support is limited to Chromium/Chromedriver.
 - [ ] Ability to recover if part of the cache is missing (ie a browser not there but browsers.json says so) (check path exists)
 - [x] Change the user data directory to fall under the major version, not release (see illustration above).
+- [ ] FIX: No need to look for the "latest" version of driver if a supported version driver already exists
 
 Contributing
 ------------
