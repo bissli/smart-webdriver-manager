@@ -8,9 +8,13 @@ logger = logging.getLogger(__name__)
 
 
 class DriverManager(metaclass=ABCMeta):
-    def __init__(self, version, base_path):
+    def __init__(self, version: int | None = None, base_path: str = None):
+        """
+        base_path: location on system to store browsers and drivers. Defaults to platformdirs.
+        version: driver (browser) version. None or 0 implies latest version.
+        """
+        self._version = version or 0
         self._base_path = base_path
-        self._version = version
         logger.info('Running driver manager')
 
     @abstractmethod
@@ -35,8 +39,12 @@ class ChromeDriverManager(DriverManager):
     __called_driver__ = False
     __called_browser__ = False
 
-    def __init__(self, version: int = 0, base_path=None):
-        super().__init__(version, base_path)
+    def __init__(self, version: int | None = None, base_path: str = None):
+        """
+        base_path: location on system to store browsers and drivers. Defaults to platformdirs.
+        version: driver (browser) version. None or 0 implies latest version.
+        """
+        super().__init__(version or 0, base_path)
         self._cx = SmartChromeContextManager(self._base_path)
 
     @cache
