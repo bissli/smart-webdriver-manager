@@ -2,22 +2,20 @@ import datetime
 import json
 import logging
 import os
-import platform
 import re
 import shutil
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
+
+from platformdirs import PlatformDirs
 
 logger = logging.getLogger(__name__)
 
 
 from smart_webdriver_manager.utils import unpack_zip
 
-DEFAULT_BASE_PATH = {
-    'Windows': Path('~/appdata/roaming/swm').expanduser(),
-    'Linux': Path('~/.local/share/swm').expanduser(),
-    'Drawin': Path('~/Library/Application Support/swm').expanduser(),
-}.get(platform.system(), Path('~/.swm').expanduser())
+dirs = PlatformDirs(appname='swm', roaming=True)
+DEFAULT_BASE_PATH = list(dirs.iter_data_dirs())[0]
 
 
 class SmartCache(metaclass=ABCMeta):
