@@ -6,40 +6,41 @@ readme = "README.md"
 license = "MIT"
 authors = ["bissli"]
 repository = "https://github.com/bissli/smart-webdriver-manager"
-classifiers=[
-	"License :: OSI Approved :: Apache Software License",
-	"Development Status :: 5 - Production/Stable",
-	"Intended Audience :: Developers",
-	"Natural Language :: English",
-	"Programming Language :: Python :: 3.8",
-	"Programming Language :: Python :: 3.9",
-	"Programming Language :: Python :: 3 :: Only",
-	"Topic :: Software Development :: Libraries",
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries",
 ]
 
 [tool.poetry.dependencies]
 python = "^3.8"
+
 requests = "*"
 backoff = "*"
 tqdm = "*"
-platformdirs = "^4.2.0"
+platformdirs = "*"
 
-[tool.poetry.group.test]
-optional = true
+mock = { version = "^4.0.3", optional = true }
+selenium = { version = "^4.1.0", optional = true }
+pytest = { version = "*", optional = true }
+pytest-cov = { version = "*", optional = true }
+asserts = { version = "*", optional = true }
+bump2version = { version = "*", optional = true }
 
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.test.dependencies]
-mock = "^4.0.3"
-selenium = "^4.1.0"
-pytest = "*"
-pytest-cov = "*"
-asserts = "*"
-
-[tool.poetry.group.dev.dependencies]
-bump2version = "*"
-twine = "*"
+[tool.poetry.extras]
+test = [
+  "mock",
+  "selenium",
+  "pytest",
+  "pytest-cov",
+  "asserts",
+  "bump2version",
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
