@@ -4,15 +4,14 @@ import logging
 import os
 import re
 import shutil
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from platformdirs import PlatformDirs
+from smart_webdriver_manager.utils import unpack_zip
 
 logger = logging.getLogger(__name__)
 
-
-from smart_webdriver_manager.utils import unpack_zip
 
 dirs = PlatformDirs(appname='swm', roaming=True)
 DEFAULT_BASE_PATH = list(dirs.iter_data_dirs())[0]

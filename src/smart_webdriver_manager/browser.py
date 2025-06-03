@@ -1,13 +1,12 @@
 import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
+
+from smart_webdriver_manager.context import SmartChromeContextManager
 
 logger = logging.getLogger(__name__)
 
 
-from smart_webdriver_manager.context import SmartChromeContextManager
-
-
-class BrowserManager(metaclass=ABCMeta):
+class BrowserManager(ABC):
     @abstractmethod
     def install(self, version: int = 0, **kwargs):
         """One of the `smart` elements. Uses `version` to determine
