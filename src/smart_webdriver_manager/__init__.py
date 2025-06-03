@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# Avaialble managers
+# Available managers
 from smart_webdriver_manager.driver import ChromeDriverManager
 
 __all__ = [

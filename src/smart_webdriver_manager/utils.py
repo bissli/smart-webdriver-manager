@@ -82,7 +82,7 @@ def mktempdir() -> Path:
         remove()
 
 
-def url_path_join(*parts):
+def url_path_join(*parts: str) -> str:
     """Normalize url parts and join them with a slash.
     """
     schemes, netlocs, paths, queries, fragments = zip(*(urlsplit(part) for part in parts))
@@ -91,7 +91,7 @@ def url_path_join(*parts):
     return urlunsplit((scheme, netloc, path, query, fragment))
 
 
-def first_of_each(*sequences):
+def first_of_each(*sequences: tuple[tuple[str, ...], ...]) -> tuple[str, ...]:
     return (next((x for x in sequence if x), '') for sequence in sequences)
 
 

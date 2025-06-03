@@ -1,5 +1,5 @@
 import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from functools import cache
 
 from smart_webdriver_manager.context import SmartChromeContextManager
@@ -7,7 +7,7 @@ from smart_webdriver_manager.context import SmartChromeContextManager
 logger = logging.getLogger(__name__)
 
 
-class DriverManager(metaclass=ABCMeta):
+class DriverManager(ABC):
     def __init__(self, version: int | None = None, base_path: str = None):
         """
         base_path: location on system to store browsers and drivers. Defaults to platformdirs.
@@ -36,9 +36,6 @@ class DriverManager(metaclass=ABCMeta):
 
 class ChromeDriverManager(DriverManager):
 
-    __called_driver__ = False
-    __called_browser__ = False
-
     def __init__(self, version: int | None = None, base_path: str = None):
         """
         base_path: location on system to store browsers and drivers. Defaults to platformdirs.
@@ -54,33 +51,25 @@ class ChromeDriverManager(DriverManager):
         """
         driver_release = self._cx.get_driver_release(self._version)
         driver_path = self._cx.get_driver(str(driver_release))
-        self.__called_driver__ = True
-        if not self.__called_browser__:
-            self.get_browser()
         return str(driver_path)
 
     @cache
-    def _get_browser_helper(self):
-        if not self.__called_driver__:
-            self.get_driver()
+    def _get_browser_release_info(self):
         return self._cx.get_browser_release(self._version)
 
     @cache
     def get_browser(self):
-        self.__called_browser__ = True
-        browser_release, browser_revision = self._get_browser_helper()
+        browser_release, browser_revision = self._get_browser_release_info()
         browser_path = self._cx.get_browser(str(browser_release), str(browser_revision))
         return str(browser_path)
 
     def get_browser_user_data(self):
-        if not self.__called_browser__:
-            self.get_browser()
-        browser_release, browser_revision = self._get_browser_helper()
+        self.get_browser()
+        browser_release, browser_revision = self._get_browser_release_info()
         user_data_path = self._cx.get_browser_user_data(str(browser_release), str(browser_revision))
         return str(user_data_path)
 
     def remove_browser_user_data(self):
-        if not self.__called_browser__:
-            self.get_browser()
-        browser_release, browser_revision = self._get_browser_helper()
+        self.get_browser()
+        browser_release, browser_revision = self._get_browser_release_info()
         self._cx.remove_browser_user_data(str(browser_release), str(browser_revision))

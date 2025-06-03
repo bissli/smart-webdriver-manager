@@ -2,27 +2,22 @@ import json
 import logging
 import platform
 import re
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from functools import cache
-
-logger = logging.getLogger(__name__)
-
 from pathlib import Path
 
 import backoff
 import requests
 from packaging.version import Version, parse
-from smart_webdriver_manager.cache import (
-    DEFAULT_BASE_PATH,
-    BrowserCache,
-    BrowserUserDataCache,
-    DriverCache,
-)
+from smart_webdriver_manager.cache import DEFAULT_BASE_PATH, BrowserCache
+from smart_webdriver_manager.cache import BrowserUserDataCache, DriverCache
 from smart_webdriver_manager.utils import download_file
 from smart_webdriver_manager.utils import url_path_join as urljoin
 
+logger = logging.getLogger(__name__)
 
-class SmartContextManager(metaclass=ABCMeta):
+
+class SmartContextManager(ABC):
     def __init__(self, browser_name, base_path=None):
         self._base_path = base_path or DEFAULT_BASE_PATH
         self._browser_name = browser_name
@@ -51,7 +46,7 @@ class SmartContextManager(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_browser_release(self, version: int = 0) -> (Version, Version):
+    def get_browser_release(self, version: int = 0) -> tuple[Version, Version]:
         """Translate the version to a release
         """
 
@@ -60,17 +55,17 @@ class SmartContextManager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_driver(self, release) -> str:
+    def get_driver(self, release: str) -> str:
         pass
 
     @abstractmethod
-    def get_browser(self, release, revision=None) -> str:
+    def get_browser(self, release: str, revision: str = None) -> str:
         pass
 
     def _browser_to_driver(self):
         if re.search(r'chrom|goog', self._browser_name, re.I):
             return 'chromedriver'
-        raise NotImplementedError('Other browers are not avaialble')
+        raise NotImplementedError('Other browsers are not available')
 
 
 CHROME_BROWSER_SNAPSHOT_REPO = urljoin('https://www.googleapis.com/',
@@ -123,7 +118,7 @@ class SmartChromeContextManager(SmartContextManager):
         resp = requests.get(url)
         if resp.status_code == 404:
             raise ValueError(f'There is no driver for version {version}')
-        elif resp.status_code != 200:
+        if resp.status_code != 200:
             raise ValueError(
                 f'response body:\n{resp.json()}\n'
                 f'request url:\n{resp.request.url}\n'
@@ -134,7 +129,7 @@ class SmartChromeContextManager(SmartContextManager):
         return release
 
     @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_time=30)
-    def get_browser_release(self, version: int = 0) -> (Version, Version):
+    def get_browser_release(self, version: int = 0) -> tuple[Version, Version]:
         """Find latest corresponding chromium relese to specified/latest chromedriver
         """
         release = self._release_map.get(version, self.get_driver_release(version))
