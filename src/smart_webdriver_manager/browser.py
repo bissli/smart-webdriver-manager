@@ -23,5 +23,5 @@ class ChromeBrowserManager(BrowserManager):
     def install(self, version: int = 0):
         """Smart lookup for current browser version"""
         logger.debug('Fetching chromium browser')
-        revision = self._cx.find_supported_chromium_revision(version)
-        return self._cx.fetch_browser(revision)
+        release, revision = self._cx.get_browser_release(version)
+        return self._cx.get_browser(str(release), str(revision))
