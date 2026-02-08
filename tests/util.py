@@ -12,7 +12,8 @@ def run_chrome_helper(driver_path, browser_path, user_data_dir):
     """Real driver check"""
     options = ChromeOptions()
     options.binary_location = browser_path
-    options.headless = True
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-features=MediaRouter')
     options.add_argument(f'--user-data-dir={user_data_dir}')
     service = Service(executable_path=driver_path)
     driver = webdriver.Chrome(service=service, options=options)

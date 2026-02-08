@@ -1,11 +1,11 @@
 import glob
 import logging
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 from asserts import assert_equal, assert_false, assert_in, assert_not_equal
 from asserts import assert_true
-from unittest.mock import Mock
 from smart_webdriver_manager import ChromeDriverManager
 from smart_webdriver_manager.context import SmartChromeContextManager
 from smart_webdriver_manager.utils import mktempdir
@@ -160,6 +160,57 @@ def test_remove_chrome_user_data_dir(tempdir):
     assert_true(Path(user_data_dir).exists())
     cdm.remove_browser_user_data()
     assert_false(Path(user_data_dir).exists())
+
+
+def test_remove_driver(tempdir):
+    """Verify remove_driver deletes the cached driver for a version."""
+    cdm = ChromeDriverManager(base_path=tempdir, version=120)
+    driver_path = Path(cdm.get_driver())
+    assert_true(driver_path.exists())
+    cdm.remove_driver()
+    assert_false(driver_path.exists())
+
+
+def test_remove_browser(tempdir):
+    """Verify remove_browser deletes the cached browser for a version."""
+    cdm = ChromeDriverManager(base_path=tempdir, version=120)
+    browser_path = Path(cdm.get_browser())
+    assert_true(browser_path.exists())
+    cdm.remove_browser()
+    assert_false(browser_path.exists())
+
+
+def test_clear_cache(tempdir):
+    """Verify clear_cache removes all cached drivers and browsers."""
+    cdm = ChromeDriverManager(base_path=tempdir, version=117)
+    driver_path = Path(cdm.get_driver())
+    browser_path = Path(cdm.get_browser())
+    assert_true(driver_path.exists())
+    assert_true(browser_path.exists())
+
+    cdm.clear_cache()
+
+    assert_false(driver_path.exists())
+    assert_false(browser_path.exists())
+    drivers_json = Path(tempdir, 'drivers.json')
+    browsers_json = Path(tempdir, 'browsers.json')
+    assert_false(drivers_json.exists())
+    assert_false(browsers_json.exists())
+
+
+def test_cached_driver_skips_network(tempdir):
+    """Verify get_driver uses cache and skips network for known version."""
+    cdm = ChromeDriverManager(base_path=tempdir, version=118)
+    driver_path_1 = cdm.get_driver()
+
+    cdm2 = ChromeDriverManager(base_path=tempdir, version=118)
+    with patch.object(
+        cdm2._cx, 'get_driver_release',
+        wraps=cdm2._cx.get_driver_release,
+    ) as mock_release:
+        driver_path_2 = cdm2.get_driver()
+        mock_release.assert_not_called()
+    assert_equal(driver_path_1, driver_path_2)
 
 
 if __name__ == '__main__':
