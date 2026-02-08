@@ -5,7 +5,7 @@ Smart Webdriver Manager
 
 A smart webdriver manager. Inspired by [webdriver_manager](https://github.com/SergeyPirogov/webdriver_manager/) and [chromedriver-binary-auto](https://github.com/danielkaiser/python-chromedriver-binary).
 
-Unlike other managers, this module manages the driver, browser, and data directory indepdently of the system installed browser.
+Unlike other managers, this module manages the driver, browser, and data directory independently of the system installed browser.
 
 The manager requires only a specified browser version (i.e. Chromium 117, 118, 120, etc.). It manages the remaining components.
 
@@ -13,7 +13,7 @@ These are then cached for future use in the user-specified or system-default dir
 
 ```python
 for version in [0, 75, 80, 95, 96]: # 0 -> latest
-  # auto-fetch and configure all the needed compomenets and run the automation
+  # auto-fetch and configure all the needed components and run the automation
 ```
 
 
@@ -26,12 +26,17 @@ Supported Driver/Platform
 | **Linux**                 | x            | -           |
 | **macOS (Apple Silicon)** | x            | -           |
 
+Installation
+------------
+
+```bash
+pip install smart-webdriver-manager
+```
+
 Examples
 --------
 
-```python
-pip install smart-webdriver-manager
-```
+### Basic Usage
 
 ```python
 import os
@@ -58,30 +63,85 @@ finally:
     driver.quit()
 ```
 
-The compoenents themselves are modular. You can use the the driver or the browser independently.
+The components themselves are modular. You can use the driver or the browser independently.
 However, both the driver and browser are fetched together. If you only need a driver then other modules may be better suited.
 
-Whats really nice is the work required to update automation is now minimal. Just decrement back if the automation doesn't work.
+What's really nice is the work required to update automation is now minimal. Just decrement back if the automation doesn't work.
 No need to install/uninstall browsers when verifying versions.
 
-Development
+### Multiple Versions
+
+```python
+from smart_webdriver_manager import ChromeDriverManager
+
+for version in [117, 118, 120, 0]:  # 0 -> latest
+    cdm = ChromeDriverManager(version=version)
+    driver_path = cdm.get_driver()
+    browser_path = cdm.get_browser()
+    # run automation with this version ...
+```
+
+### Custom Cache Directory
+
+```python
+from smart_webdriver_manager import ChromeDriverManager
+
+cdm = ChromeDriverManager(version=120, base_path='/tmp/my-cache')
+driver_path = cdm.get_driver()
+```
+
+### Cache Management
+
+```python
+from smart_webdriver_manager import ChromeDriverManager
+
+cdm = ChromeDriverManager(version=120)
+
+# Remove cached driver for this version
+cdm.remove_driver()
+
+# Remove cached browser for this version
+cdm.remove_browser()
+
+# Remove user data directory for this version
+cdm.remove_browser_user_data()
+
+# Remove all cached drivers and browsers
+cdm.clear_cache()
+```
+
+macOS Notes
 -----------
 
-There are two ways to run local tests
+When running Chromium on macOS, the browser may trigger a **"Do you want to allow this app to find devices on your local network?"** popup. To suppress this, add the following Chrome option:
 
 ```python
-pip install -U pip poetry tox
-git clone https://github.com/bissli/smart-webdriver-manager.git && cd smart-webdriver-manager
-tox
+options.add_argument('--disable-features=MediaRouter')
 ```
 
-```python
-pip install -U pip poetry
-git clone https://github.com/bissli/smart-webdriver-manager.git && cd smart-webdriver-manager
-poetry install --with test
-poetry shell
-pytest
-```
+This is already included in the basic usage example above.
+
+API Reference
+-------------
+
+### `ChromeDriverManager(version=None, base_path=None)`
+
+| Parameter   | Type            | Default | Description                                             |
+| ----------- | --------------- | ------- | ------------------------------------------------------- |
+| `version`   | `int` or `None` | `None`  | Browser version (e.g. 117, 120). `None` or `0` = latest |
+| `base_path` | `str` or `None` | `None`  | Cache directory. `None` = system default                |
+
+### Methods
+
+| Method                       | Returns | Description                                         |
+| ---------------------------- | ------- | --------------------------------------------------- |
+| `get_driver()`               | `str`   | Download/cache chromedriver and return its path     |
+| `get_browser()`              | `str`   | Download/cache Chromium browser and return its path |
+| `get_browser_user_data()`    | `str`   | Return path to user data directory for this version |
+| `remove_driver()`            | `None`  | Remove cached driver for the current version        |
+| `remove_browser()`           | `None`  | Remove cached browser for the current version       |
+| `remove_browser_user_data()` | `None`  | Remove user data directory for the current version  |
+| `clear_cache()`              | `None`  | Remove all cached drivers and browsers              |
 
 Technical Layout
 ----------------
@@ -96,12 +156,11 @@ To clarify how the module works, below is the cache directory illustrated:
 
 1. For browsers with revisions, we return the latest revision to the browser.
 2. For driver with releases, we return the latest releases to the driver corresponding to the browser.
-3. A user data directory is aligned with the release (see TODO)
+3. A user data directory is aligned with the release.
 
 For example if the user requests chromedriver v96, revision 92512 will be returned for the browser and 96.1.85.111 for the driver.
 
-```python
-"""Cache structure
+```
 swm/
     browsers/
         chromium/ [linux]
@@ -146,7 +205,6 @@ swm/
                 geckodriver
     browsers.json
     drivers.json
-"""
 ```
 
 The system default directory for the cache is as follows:
@@ -155,13 +213,24 @@ The system default directory for the cache is as follows:
 - `Linux`:   ~/.local/share/swm
 - `macOS`:   ~/Library/Application Support/swm
 
-TODO
-----
-- [ ] Complete the cache clear/remove methods. Write methods to delete the data directory or parts of the cache.
-- [ ] Add Firefox as another supported platform. Current support is limited to Chromium/Chromedriver.
-- [ ] Ability to recover if part of the cache is missing (ie a browser not there but browsers.json says so) (check path exists)
-- [x] Change the user data directory to fall under the major version, not release (see illustration above).
-- [ ] FIX: No need to look for the "latest" version of driver if a supported version driver already exists
+Development
+-----------
+
+There are two ways to run local tests
+
+```bash
+pip install -U pip poetry tox
+git clone https://github.com/bissli/smart-webdriver-manager.git && cd smart-webdriver-manager
+tox
+```
+
+```bash
+pip install -U pip poetry
+git clone https://github.com/bissli/smart-webdriver-manager.git && cd smart-webdriver-manager
+poetry install --with test
+poetry shell
+pytest
+```
 
 Contributing
 ------------
