@@ -213,6 +213,22 @@ class SmartChromeContextManager(SmartContextManager):
         """
         return str(self._browser_user_data_cache.get(release, revision))
 
+    def remove_driver(self, release: str) -> None:
+        """Remove cached driver for the specified release.
+        """
+        self._driver_cache.remove(release)
+
+    def remove_browser(self, release: str, revision: str | None = None) -> None:
+        """Remove cached browser for the specified release and revision.
+        """
+        self._browser_cache.remove(release, revision)
+
+    def clear_cache(self) -> None:
+        """Remove all cached drivers and browsers.
+        """
+        self._driver_cache.clear()
+        self._browser_cache.clear()
+
     def remove_browser_user_data(self, release: str, revision: str):
         """Remove UserData folder matching release and revision
         """

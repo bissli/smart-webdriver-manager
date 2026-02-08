@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from functools import cache
 
+from packaging.version import parse
 from smart_webdriver_manager.context import SmartChromeContextManager
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,13 @@ class ChromeDriverManager(DriverManager):
         """Smart lookup for current driver version
         - chromedriver version will always be <= latest chromium browser
         """
+        if self._version >= 1:
+            cached_release = self._cx._driver_cache.find_release_for_version(
+                self._version)
+            if cached_release:
+                self._cx._release_map[self._version] = parse(cached_release)
+                driver_path = self._cx.get_driver(cached_release)
+                return str(driver_path)
         driver_release = self._cx.get_driver_release(self._version)
         driver_path = self._cx.get_driver(str(driver_release))
         return str(driver_path)
@@ -68,6 +76,23 @@ class ChromeDriverManager(DriverManager):
         browser_release, browser_revision = self._get_browser_release_info()
         user_data_path = self._cx.get_browser_user_data(str(browser_release), str(browser_revision))
         return str(user_data_path)
+
+    def remove_driver(self) -> None:
+        """Remove the cached driver for the current version.
+        """
+        driver_release = self._cx.get_driver_release(self._version)
+        self._cx.remove_driver(str(driver_release))
+
+    def remove_browser(self) -> None:
+        """Remove the cached browser for the current version.
+        """
+        browser_release, browser_revision = self._get_browser_release_info()
+        self._cx.remove_browser(str(browser_release), str(browser_revision))
+
+    def clear_cache(self) -> None:
+        """Remove all cached drivers and browsers.
+        """
+        self._cx.clear_cache()
 
     def remove_browser_user_data(self):
         self.get_browser()

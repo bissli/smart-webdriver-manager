@@ -61,7 +61,7 @@ class SmartCache(ABC):
         files = unpack_zip(zip_path)
 
         if platform.system() == 'Darwin':
-            subprocess.run(['xattr', '-cr', str(path)], check=False)
+            subprocess.run(['xattr', '-cr', str(path)], check=False, capture_output=True)
 
         binary = self._match_binary(files, typ)
         binary_path = Path(path, binary)
@@ -81,6 +81,26 @@ class SmartCache(ABC):
             if f'{re_match.sub("", name).lower()}' in f'{typ}':
                 return Path(f)
         raise Exception(f"Can't get binary for {typ} among {files}")
+
+    def remove(self, typ: str, release: str, revision: str | None = None) -> None:
+        """Remove a cached entry from filesystem and metadata.
+        """
+        key = f"{typ}_{release}{'_' if revision else ''}{revision or ''}"
+        path = Path(self._cache_base_path, typ, release, revision or '')
+        if path.exists():
+            shutil.rmtree(path, ignore_errors=False)
+        metadata = self._read_metadata()
+        metadata.pop(key, None)
+        with Path(self._cache_json_path).open('w+') as outfile:
+            json.dump(metadata, outfile, indent=4)
+
+    def clear(self) -> None:
+        """Remove all cached entries and metadata.
+        """
+        if self._cache_base_path.exists():
+            shutil.rmtree(self._cache_base_path, ignore_errors=False)
+        if self._cache_json_path.exists():
+            self._cache_json_path.unlink()
 
     def _rebuild_metadata_from_filesystem(self) -> dict:
         """Rebuild JSON metadata by scanning the actual filesystem structure.
@@ -231,6 +251,29 @@ class DriverCache(SmartCache):
         """
         return super().put(f, self._driver_name, release)
 
+    def remove(self, release: str) -> None:
+        """Remove cached driver for the specified release.
+        """
+        super().remove(self._driver_name, release)
+
+    def clear(self) -> None:
+        """Remove all cached drivers.
+        """
+        super().clear()
+
+    def find_release_for_version(self, version: int) -> str | None:
+        """Find a cached release matching the given major version.
+        """
+        metadata = self._read_metadata()
+        for key, entry in metadata.items():
+            if not key.startswith(f'{self._driver_name}_'):
+                continue
+            release_str = key.removeprefix(f'{self._driver_name}_')
+            major = int(release_str.split('.', maxsplit=1)[0] or 0)
+            if major == version and Path(entry['binary_path']).exists():
+                return release_str
+        return None
+
 
 class BrowserCache(SmartCache):
     """Browser Cache"""
@@ -263,6 +306,16 @@ class BrowserCache(SmartCache):
             Path to the cached browser binary
         """
         return super().put(f, self._browser_name, release, revision)
+
+    def remove(self, release: str, revision: str | None = None) -> None:
+        """Remove cached browser for the specified release and revision.
+        """
+        super().remove(self._browser_name, release, revision)
+
+    def clear(self) -> None:
+        """Remove all cached browsers.
+        """
+        super().clear()
 
 
 class BrowserUserDataCache:
