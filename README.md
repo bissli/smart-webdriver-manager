@@ -119,8 +119,6 @@ When running Chromium on macOS, the browser may trigger a **"Do you want to allo
 options.add_argument('--disable-features=MediaRouter')
 ```
 
-This is already included in the basic usage example above.
-
 API Reference
 -------------
 
