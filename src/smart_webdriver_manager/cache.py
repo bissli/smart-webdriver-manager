@@ -1,9 +1,10 @@
 import datetime
 import json
 import logging
-import os
+import platform
 import re
 import shutil
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -59,6 +60,9 @@ class SmartCache(ABC):
         logger.debug('Unzipping...')
         files = unpack_zip(zip_path)
 
+        if platform.system() == 'Darwin':
+            subprocess.run(['xattr', '-cr', str(path)], check=False)
+
         binary = self._match_binary(files, typ)
         binary_path = Path(path, binary)
         self._write_metadata(binary_path, typ, release, revision)
@@ -70,8 +74,9 @@ class SmartCache(ABC):
         if len(files) == 1:
             return files[0]
         for f in files:
+            if f.endswith('/'):
+                continue
             name = Path(f).name
-            # FIXME: Mac will not return the correct app
             re_match = re.compile(r'(ium)?(.(exe|app))?$')
             if f'{re_match.sub("", name).lower()}' in f'{typ}':
                 return Path(f)
@@ -158,7 +163,7 @@ class SmartCache(ABC):
         rebuilt_metadata = self._rebuild_metadata_from_filesystem()
 
         self._cache_json_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._cache_json_path, 'w+') as outfile:
+        with Path(self._cache_json_path).open('w+') as outfile:
             json.dump(rebuilt_metadata, outfile, indent=4)
 
         logger.debug('Synchronized cache metadata with filesystem')
@@ -181,7 +186,7 @@ class SmartCache(ABC):
             }
         }
         metadata.update(data)
-        with open(self._cache_json_path, 'w+') as outfile:
+        with Path(self._cache_json_path).open('w+') as outfile:
             json.dump(metadata, outfile, indent=4)
 
     def _read_metadata(self) -> dict:
@@ -191,7 +196,7 @@ class SmartCache(ABC):
             Dictionary containing cache metadata, empty dict if file doesn't exist
         """
         if Path(self._cache_json_path).exists():
-            with open(self._cache_json_path) as outfile:
+            with Path(self._cache_json_path).open() as outfile:
                 return json.load(outfile)
         return {}
 
@@ -309,7 +314,7 @@ class BrowserUserDataCache:
             revision: Optional browser revision string
         """
         user_data_path = self._calc_user_data_path(release, revision)
-        if not os.path.exists(user_data_path):
+        if not Path(user_data_path).exists():
             logger.warning(f'{user_data_path} does not exist')
             return
         try:

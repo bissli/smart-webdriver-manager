@@ -1,11 +1,11 @@
 import glob
 import logging
-import os
 from pathlib import Path
 
 import pytest
-from asserts import assert_equal, assert_in, assert_not_equal, assert_true, assert_false
-from mock import Mock
+from asserts import assert_equal, assert_false, assert_in, assert_not_equal
+from asserts import assert_true
+from unittest.mock import Mock
 from smart_webdriver_manager import ChromeDriverManager
 from smart_webdriver_manager.context import SmartChromeContextManager
 from smart_webdriver_manager.utils import mktempdir
@@ -22,7 +22,7 @@ def tempdir():
         yield tmpdir
 
 
-@pytest.mark.parametrize('version', [90, 80, 70])
+@pytest.mark.parametrize('version', [120, 118, 117])
 def test_chrome_manager_with_specific_version(version, tempdir):
     logger.info('=test_chrome_manager_with_specific_version')
 
@@ -79,7 +79,8 @@ def test_chrome_manager_cached_driver_with_selenium(tempdir):
 
 @pytest.mark.parametrize(
     ('platform', 'version'),
-    [('Windows', 117), ('Linux', 114), ('Windows', 95), ('Linux', 120)],
+    [('Windows', 115), ('Linux', 116), ('Windows', 123), ('Linux', 124),
+     ('Darwin', 125), ('Darwin', 126)],
 )
 def test_can_get_driver_for_platform(platform, version, tempdir):
     logger.info(f'=test_can_get_driver_for_platform {platform}')
@@ -99,7 +100,8 @@ def test_can_get_driver_for_platform(platform, version, tempdir):
 
 @pytest.mark.parametrize(
     ('platform', 'version'),
-    [('Windows', 117), ('Linux', 114), ('Windows', 95), ('Linux', 120)],
+    [('Windows', 115), ('Linux', 116), ('Windows', 123), ('Linux', 124),
+     ('Darwin', 125), ('Darwin', 126)],
 )
 def test_can_get_browser_for_platform(platform, version, tempdir):
     logger.info(f'=test_can_get_browser_for_platform {platform} {version}')
@@ -113,7 +115,8 @@ def test_can_get_browser_for_platform(platform, version, tempdir):
     scm = SmartChromeContextManager(base_path=tempdir)
     browser_zip = scm.browser_zip(999999)  # see code
 
-    browser_files = {Path(f).name for f in glob.glob(f'{browser_path.parents[1]}/*')}
+    parent_level = 4 if platform == 'Darwin' else 1
+    browser_files = {Path(f).name for f in glob.glob(f'{browser_path.parents[parent_level]}/*')}
     assert_equal(browser_files, {f'chrome-{browser_zip}.zip', f'chrome-{browser_zip}'})
 
 
@@ -154,9 +157,9 @@ def test_remove_chrome_user_data_dir(tempdir):
     logger.info('=test_remove_chrome_user_data_dir')
     cdm = ChromeDriverManager(base_path=tempdir, version=122)
     user_data_dir = cdm.get_browser_user_data()
-    assert_true(os.path.exists(user_data_dir))
+    assert_true(Path(user_data_dir).exists())
     cdm.remove_browser_user_data()
-    assert_false(os.path.exists(user_data_dir))
+    assert_false(Path(user_data_dir).exists())
 
 
 if __name__ == '__main__':

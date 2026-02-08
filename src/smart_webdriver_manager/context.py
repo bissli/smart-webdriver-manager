@@ -29,7 +29,7 @@ class SmartContextManager(ABC):
         return {
             'Windows': 'win32',
             'Linux': 'linux64',
-            'Darwin': 'mac64',
+            'Darwin': 'mac-arm64',
         }.get(platform.system())
 
     @property
@@ -37,7 +37,7 @@ class SmartContextManager(ABC):
         return {
             'Windows': 'Win_x64',
             'Linux': 'Linux_x64',
-            'Darwin': 'Mac',
+            'Darwin': 'Mac_Arm',
         }.get(platform.system())
 
     @abstractmethod
@@ -168,9 +168,10 @@ class SmartChromeContextManager(SmartContextManager):
         if binary_path:
             logger.debug(f'Already have latest version for release {release}')
             return binary_path
-        version = int(release.split('.')[0] or 0)
+        version = int(release.split('.', maxsplit=1)[0] or 0)
         if 1 <= version < 115:
-            zip_file = f'chromedriver_{self.driver_platform}.zip'
+            dp = self.driver_platform.replace('-', '_')
+            zip_file = f'chromedriver_{dp}.zip'
             chromedriver_url = urljoin(CHROMEDRIVER_114_AND_BELOW_REPO, release, zip_file)
         else:
             zip_file = f'chromedriver-{self.driver_platform}.zip'

@@ -7,7 +7,7 @@ A smart webdriver manager. Inspired by [webdriver_manager](https://github.com/Se
 
 Unlike other managers, this module manages the driver, browser, and data directory indepdently of the system installed browser.
 
-The manager requires only a specified browser version (i.e. Chromium 90, 110, 118, etc.). It manages the remaining components.
+The manager requires only a specified browser version (i.e. Chromium 117, 118, 120, etc.). It manages the remaining components.
 
 These are then cached for future use in the user-specified or system-default directory. In other words:
 
@@ -20,12 +20,11 @@ for version in [0, 75, 80, 95, 96]: # 0 -> latest
 Supported Driver/Platform
 --------------------------
 
-|             | **Chromium** | **Firefox** |
-|-------------|--------------|-------------|
-| **Windows** |       x      |      -      |
-| **Linux**   |       x      |      -      |
-
-I do not plan to support MacOS. Contributions are welcome through pull requests.
+|                           | **Chromium** | **Firefox** |
+| ------------------------- | ------------ | ----------- |
+| **Windows**               | x            | -           |
+| **Linux**                 | x            | -           |
+| **macOS (Apple Silicon)** | x            | -           |
 
 Examples
 --------
@@ -119,6 +118,15 @@ swm/
                     929512-chrome-linux.zip
             user-data/
                 ...
+        chromium/ [macOS]
+            125.0.6422.141/
+                1287718/
+                    chrome-mac/
+                        Chromium.app/
+                            Contents/MacOS/Chromium
+                    1287718-chrome-mac.zip
+            user-data/
+                ...
         firefox/
           ...
     drivers/
@@ -145,6 +153,7 @@ The system default directory for the cache is as follows:
 
 - `Windows`: ~/appdata/roaming/swm
 - `Linux`:   ~/.local/share/swm
+- `macOS`:   ~/Library/Application Support/swm
 
 TODO
 ----
