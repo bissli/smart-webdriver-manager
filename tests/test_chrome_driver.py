@@ -1,7 +1,7 @@
 import glob
 import logging
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from asserts import assert_equal, assert_false, assert_in, assert_not_equal
@@ -82,11 +82,10 @@ def test_chrome_manager_cached_driver_with_selenium(tempdir):
     [('Windows', 115), ('Linux', 116), ('Windows', 123), ('Linux', 124),
      ('Darwin', 125), ('Darwin', 126)],
 )
-def test_can_get_driver_for_platform(platform, version, tempdir):
+def test_can_get_driver_for_platform(platform, version, tempdir, monkeypatch):
     logger.info(f'=test_can_get_driver_for_platform {platform}')
 
-    import platform as platform_
-    platform_.system = Mock(return_value=platform)
+    monkeypatch.setattr('platform.system', lambda: platform)
     cdm = ChromeDriverManager(base_path=tempdir, version=version)
     driver_path = Path(cdm.get_driver())
     assert_true(driver_path.exists())
@@ -103,11 +102,10 @@ def test_can_get_driver_for_platform(platform, version, tempdir):
     [('Windows', 115), ('Linux', 116), ('Windows', 123), ('Linux', 124),
      ('Darwin', 125), ('Darwin', 126)],
 )
-def test_can_get_browser_for_platform(platform, version, tempdir):
+def test_can_get_browser_for_platform(platform, version, tempdir, monkeypatch):
     logger.info(f'=test_can_get_browser_for_platform {platform} {version}')
 
-    import platform as platform_
-    platform_.system = Mock(return_value=platform)
+    monkeypatch.setattr('platform.system', lambda: platform)
     cdm = ChromeDriverManager(base_path=tempdir, version=version)
     browser_path = Path(cdm.get_browser())
     assert_true(browser_path.exists())
