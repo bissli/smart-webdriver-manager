@@ -7,23 +7,25 @@ license = "MIT"
 authors = ["bissli"]
 repository = "https://github.com/bissli/smart-webdriver-manager"
 classifiers = [
-  "License :: OSI Approved :: Apache Software License",
+  "License :: OSI Approved :: MIT License",
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Natural Language :: English",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3 :: Only",
   "Topic :: Software Development :: Libraries",
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 
 requests = "*"
 backoff = "*"
 tqdm = "*"
 platformdirs = "*"
+filelock = "*"
 
 mock = { version = "^4.0.3", optional = true }
 selenium = { version = "^4.1.0", optional = true }

@@ -1,13 +1,17 @@
+import backoff
 import datetime
 import json
 import logging
+import os
 import platform
 import re
 import shutil
 import subprocess
+import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from filelock import FileLock
 from platformdirs import PlatformDirs
 from smart_webdriver_manager.utils import unpack_zip
 
@@ -89,18 +93,19 @@ class SmartCache(ABC):
         path = Path(self._cache_base_path, typ, release, revision or '')
         if path.exists():
             shutil.rmtree(path, ignore_errors=False)
-        metadata = self._read_metadata()
-        metadata.pop(key, None)
-        with Path(self._cache_json_path).open('w+') as outfile:
-            json.dump(metadata, outfile, indent=4)
+        with self._lock():
+            metadata = self._read_metadata()
+            metadata.pop(key, None)
+            self._atomic_write_metadata(metadata)
 
     def clear(self) -> None:
         """Remove all cached entries and metadata.
         """
         if self._cache_base_path.exists():
             shutil.rmtree(self._cache_base_path, ignore_errors=False)
-        if self._cache_json_path.exists():
-            self._cache_json_path.unlink()
+        with self._lock():
+            if self._cache_json_path.exists():
+                self._cache_json_path.unlink()
 
     def _rebuild_metadata_from_filesystem(self) -> dict:
         """Rebuild JSON metadata by scanning the actual filesystem structure.
@@ -179,35 +184,108 @@ class SmartCache(ABC):
         Rebuilds the entire JSON metadata file based on what actually
         exists in the filesystem cache directories. This ensures the
         cache metadata stays in sync with the actual file contents.
+
+        Notes
+        -----
+        - Runs under the per-cache lock and replaces the whole map. It is
+          only reached from ``get`` when a recorded binary is missing, never
+          on the clean cold different-version path.
         """
-        rebuilt_metadata = self._rebuild_metadata_from_filesystem()
-
-        self._cache_json_path.parent.mkdir(parents=True, exist_ok=True)
-        with Path(self._cache_json_path).open('w+') as outfile:
-            json.dump(rebuilt_metadata, outfile, indent=4)
-
+        with self._lock():
+            rebuilt_metadata = self._rebuild_metadata_from_filesystem()
+            self._atomic_write_metadata(rebuilt_metadata)
         logger.debug('Synchronized cache metadata with filesystem')
 
-    def _write_metadata(self, binary_path: Path, typ: str, release: str, revision: str | None) -> None:
-        """Write metadata entry for a cached binary.
+    def _lock(self) -> FileLock:
+        """Return the cross-process lock guarding this cache's metadata file.
+
+        Returns
+        -------
+        FileLock
+            A lock bound to ``<cache_json>.lock``.
+
+        Notes
+        -----
+        - Held around every metadata read-modify-write so concurrent
+          processes provisioning different versions cannot corrupt the
+          shared JSON.
+        """
+        self._base_path.mkdir(parents=True, exist_ok=True)
+        return FileLock(f'{self._cache_json_path}.lock')
+
+    def _atomic_write_metadata(self, metadata: dict) -> None:
+        """Persist the metadata map atomically.
+
+        Serializes ``metadata`` to a temporary file in the cache directory,
+        fsyncs and closes it, then swaps it into place with ``os.replace`` so
+        a concurrent lock-free reader always sees a complete file.
 
         Parameters
-            binary_path: Path to the binary file
-            typ: Type of binary (e.g., 'chromedriver', 'chrome')
-            release: Release version string
-            revision: Optional revision string for the binary
+        ----------
+        metadata : dict
+            The full metadata map to persist.
+
+        Notes
+        -----
+        - The temp file is closed before the replace; Windows rejects
+          replacing a destination while the source handle is still open.
+        - ``os.replace`` is retried on ``PermissionError`` to absorb the
+          Windows case where a reader briefly holds the destination open; a
+          no-op on POSIX, where the rename is atomic.
         """
-        metadata = self._read_metadata()
+        self._base_path.mkdir(parents=True, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=self._base_path,
+            prefix=f'{self._cache_json_path.name}.',
+            suffix='.tmp',
+            )
+
+        @backoff.on_exception(backoff.expo, PermissionError, max_time=10)
+        def replace() -> None:
+            os.replace(tmp_path, self._cache_json_path)
+
+        try:
+            with os.fdopen(fd, 'w') as outfile:
+                json.dump(metadata, outfile, indent=4)
+                outfile.flush()
+                os.fsync(outfile.fileno())
+            replace()
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    def _write_metadata(
+        self,
+        binary_path: Path,
+        typ: str,
+        release: str,
+        revision: str | None) -> None:
+        """Write a metadata entry for a cached binary.
+
+        Parameters
+        ----------
+        binary_path : Path
+            Path to the binary file.
+        typ : str
+            Type of binary (e.g. 'chromedriver', 'chrome').
+        release : str
+            Release version string.
+        revision : str | None
+            Optional revision string for the binary.
+
+        Notes
+        -----
+        - The read-modify-write runs under the per-cache lock, so concurrent
+          writers for different keys cannot clobber each other's entries.
+        """
         key = f"{typ}_{release}{'_' if revision else ''}{revision or ''}"
-        data = {
-            key: {
-                'timestamp': datetime.date.today().strftime('%m/%d/%Y'),
-                'binary_path': str(binary_path),
+        entry = {
+            'timestamp': datetime.date.today().strftime('%m/%d/%Y'),
+            'binary_path': str(binary_path),
             }
-        }
-        metadata.update(data)
-        with Path(self._cache_json_path).open('w+') as outfile:
-            json.dump(metadata, outfile, indent=4)
+        with self._lock():
+            metadata = self._read_metadata()
+            metadata[key] = entry
+            self._atomic_write_metadata(metadata)
 
     def _read_metadata(self) -> dict:
         """Read metadata from JSON cache file.
