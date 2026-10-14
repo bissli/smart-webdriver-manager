@@ -20,7 +20,18 @@ class ChromeBrowserManager(BrowserManager):
         logger.info('Running chrome browser manager')
 
     def install(self, version: int = 0):
-        """Smart lookup for current browser version"""
+        """Path to the cached Chromium for version, downloading it if absent.
+
+        Parameters
+        ----------
+        version : int, default 0
+            Chrome major version. 0 means latest stable, resolved once per
+            instance, so a later call on the same instance keeps that release.
+
+        Returns
+        -------
+        Path
+        """
         logger.debug('Fetching chromium browser')
         release, revision = self._cx.get_browser_release(version)
         return self._cx.get_browser(str(release), str(revision))

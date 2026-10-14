@@ -56,20 +56,29 @@ class SmartCache(ABC):
 
     @abstractmethod
     def put(self, f: Path, typ: str, release: str, revision: str | None = None) -> Path:
+        key = f"{typ}_{release}{'_' if revision else ''}{revision or ''}"
         path = Path(self._cache_base_path, typ, release, revision or '')
         path.mkdir(parents=True, mode=0o755, exist_ok=True)
 
-        f = Path(f)
-        zip_path = f.replace(path.joinpath(f.name))
-        logger.debug('Unzipping...')
-        files = unpack_zip(zip_path)
+        # A process that cached this key may be running it.
+        with self._key_lock(key):
+            metadata = self._read_metadata()
+            if key in metadata and Path(metadata[key]['binary_path']).exists():
+                logger.info(f'{key} was cached by another process')
+                return Path(metadata[key]['binary_path'])
 
-        if platform.system() == 'Darwin':
-            subprocess.run(['xattr', '-cr', str(path)], check=False, capture_output=True)
+            f = Path(f)
+            zip_path = f.replace(path.joinpath(f.name))
+            logger.debug('Unzipping...')
+            files = unpack_zip(zip_path)
 
-        binary = self._match_binary(files, typ)
-        binary_path = Path(path, binary)
-        self._write_metadata(binary_path, typ, release, revision)
+            if platform.system() == 'Darwin':
+                subprocess.run(
+                    ['xattr', '-cr', str(path)], check=False, capture_output=True)
+
+            binary = self._match_binary(files, typ)
+            binary_path = Path(path, binary)
+            self._write_metadata(binary_path, typ, release, revision)
         logger.info(f'{typ} has been saved in cache at path {path}')
         return binary_path
 
@@ -91,12 +100,13 @@ class SmartCache(ABC):
         """
         key = f"{typ}_{release}{'_' if revision else ''}{revision or ''}"
         path = Path(self._cache_base_path, typ, release, revision or '')
-        if path.exists():
-            shutil.rmtree(path, ignore_errors=False)
-        with self._lock():
-            metadata = self._read_metadata()
-            metadata.pop(key, None)
-            self._atomic_write_metadata(metadata)
+        with self._key_lock(key):
+            if path.exists():
+                shutil.rmtree(path, ignore_errors=False)
+            with self._lock():
+                metadata = self._read_metadata()
+                metadata.pop(key, None)
+                self._atomic_write_metadata(metadata)
 
     def clear(self) -> None:
         """Remove all cached entries and metadata.
@@ -135,6 +145,12 @@ class SmartCache(ABC):
         """
         self._base_path.mkdir(parents=True, exist_ok=True)
         return FileLock(f'{self._cache_json_path}.lock')
+
+    def _key_lock(self, key: str) -> FileLock:
+        """Cross-process lock on one cache key, for unpacking or removing it.
+        """
+        self._base_path.mkdir(parents=True, exist_ok=True)
+        return FileLock(self._base_path.joinpath(f'{key}.lock'))
 
     def _atomic_write_metadata(self, metadata: dict) -> None:
         """Persist the metadata map atomically.
