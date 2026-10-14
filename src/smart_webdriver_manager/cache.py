@@ -1,4 +1,3 @@
-import backoff
 import datetime
 import json
 import logging
@@ -11,6 +10,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import backoff
 from filelock import FileLock
 from platformdirs import PlatformDirs
 from smart_webdriver_manager.utils import unpack_zip
@@ -107,94 +107,17 @@ class SmartCache(ABC):
             if self._cache_json_path.exists():
                 self._cache_json_path.unlink()
 
-    def _rebuild_metadata_from_filesystem(self) -> dict:
-        """Rebuild JSON metadata by scanning the actual filesystem structure.
-
-        Treats the filesystem as the source of truth for cache contents.
-        Scans the cache directory structure and recreates metadata entries
-        for all valid binaries found on disk.
-
-        Returns
-            Dictionary containing rebuilt metadata based on filesystem contents
-        """
-        metadata = {}
-
-        if not self._cache_base_path.exists():
-            return metadata
-
-        for typ_dir in self._cache_base_path.iterdir():
-            if not typ_dir.is_dir():
-                continue
-
-            typ = typ_dir.name
-
-            for release_dir in typ_dir.iterdir():
-                if not release_dir.is_dir():
-                    continue
-
-                release = release_dir.name
-
-                for item in release_dir.iterdir():
-                    if item.is_dir() and item.name:
-                        revision = item.name
-                        binary_path = self._find_binary_in_dir(item, typ)
-                        if binary_path:
-                            key = f'{typ}_{release}_{revision}'
-                            metadata[key] = {
-                                'timestamp': datetime.date.today().strftime('%m/%d/%Y'),
-                                'binary_path': str(binary_path)
-                            }
-                    else:
-                        binary_path = self._find_binary_in_dir(release_dir, typ)
-                        if binary_path:
-                            key = f'{typ}_{release}'
-                            metadata[key] = {
-                                'timestamp': datetime.date.today().strftime('%m/%d/%Y'),
-                                'binary_path': str(binary_path)
-                            }
-                            break
-
-        logger.debug(f'Rebuilt metadata with {len(metadata)} entries from filesystem')
-        return metadata
-
-    def _find_binary_in_dir(self, directory: Path, typ: str) -> Path | None:
-        """Find the binary file in a directory that matches the type.
-
-        Searches for executable files in the given directory and attempts
-        to match them against the expected binary type using existing
-        matching logic.
-
-        Parameters
-            directory: Directory to search for binary files
-            typ: Type name to match against binary files
-
-        Returns
-            Path to the binary file if found, None otherwise
-        """
-        try:
-            files = [f for f in directory.iterdir() if f.is_file()]
-            binary_name = self._match_binary([str(f) for f in files], typ)
-            return Path(directory, binary_name) if binary_name else None
-        except Exception:
-            return None
-
     def _sync_cache(self) -> None:
-        """Synchronize JSON metadata with filesystem state.
-
-        Rebuilds the entire JSON metadata file based on what actually
-        exists in the filesystem cache directories. This ensures the
-        cache metadata stays in sync with the actual file contents.
-
-        Notes
-        -----
-        - Runs under the per-cache lock and replaces the whole map. It is
-          only reached from ``get`` when a recorded binary is missing, never
-          on the clean cold different-version path.
+        """Drop metadata entries whose binary is no longer on disk.
         """
         with self._lock():
-            rebuilt_metadata = self._rebuild_metadata_from_filesystem()
-            self._atomic_write_metadata(rebuilt_metadata)
-        logger.debug('Synchronized cache metadata with filesystem')
+            metadata = self._read_metadata()
+            metadata = {
+                key: entry for key, entry in metadata.items()
+                if Path(entry['binary_path']).exists()
+                }
+            self._atomic_write_metadata(metadata)
+        logger.debug(f'Pruned cache metadata to {len(metadata)} entries')
 
     def _lock(self) -> FileLock:
         """Return the cross-process lock guarding this cache's metadata file.
@@ -249,6 +172,7 @@ class SmartCache(ABC):
                 json.dump(metadata, outfile, indent=4)
                 outfile.flush()
                 os.fsync(outfile.fileno())
+            os.chmod(tmp_path, 0o644)
             replace()
         finally:
             Path(tmp_path).unlink(missing_ok=True)

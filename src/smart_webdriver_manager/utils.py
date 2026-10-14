@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 import platform
@@ -38,9 +39,9 @@ def unpack_zip(zip_path):
     archive = zip_class(zip_path)
     try:
         archive.extractall(Path(zip_path).parent)
-    except Exception as e:
-        if e.args[0] not in {26, 13} and e.args[1] not in {'Text file busy', 'Permission denied'}:
-            raise e
+    except OSError as e:
+        if e.errno not in {errno.ETXTBSY, errno.EACCES}:
+            raise
     return archive.namelist()
 
 

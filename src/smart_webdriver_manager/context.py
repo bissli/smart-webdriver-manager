@@ -128,22 +128,64 @@ class SmartChromeContextManager(SmartContextManager):
         self._release_map[version] = release
         return release
 
+    def resolve_driver_release(self, version: int = 0) -> Version:
+        """Driver release that the driver and browser lookups share.
+
+        Parameters
+        ----------
+        version : int, default 0
+            Chrome major version. 0 or None means latest stable and skips
+            the cache.
+
+        Returns
+        -------
+        Version
+            The release already resolved for version, else a cached driver
+            of that major, else the latest patch.
+        """
+        if version and version not in self._release_map:
+            cached_release = self._driver_cache.find_release_for_version(version)
+            if cached_release:
+                self._release_map[version] = parse(cached_release)
+        return self._release_map.get(version) or self.get_driver_release(version)
+
     @backoff.on_exception(backoff.expo, requests.exceptions.RequestException, max_time=30)
     def get_browser_release(self, version: int = 0) -> tuple[Version, Version]:
-        """Find latest corresponding chromium relese to specified/latest chromedriver
+        """Chromedriver release and the Chromium revision that matches it.
+
+        Parameters
+        ----------
+        version : int, default 0
+            Chrome major version. 0 means latest stable.
+
+        Returns
+        -------
+        tuple[Version, Version]
+            Driver release, and the newest Chromium snapshot at or below
+            the branch position of the driver's milestone.
+
+        Raises
+        ------
+        ValueError
+            The milestone has not branched, as for a canary-only version, or
+            the platform has no snapshot for it.
         """
-        release = self._release_map.get(version, self.get_driver_release(version))
+        release = self.resolve_driver_release(version)
 
         revision_url = urljoin('https://chromiumdash.appspot.com',
                                'fetch_milestones?only_branched=true')
         revisions = json.loads(requests.get(revision_url).content.decode())
-        if not version:
-            revisions = sorted(revisions, key=lambda x: int(x['milestone']), reverse=True)
-        else:
-            revisions = [d for d in revisions if int(d['milestone']) == version]
-        revision = int(revisions[0]['chromium_main_branch_position'])
+        milestone = version or release.major
+        branched = [d for d in revisions if int(d['milestone']) == milestone]
+        if not branched:
+            raise ValueError(f'Chromium milestone {milestone} has not branched')
+        revision = int(branched[0]['chromium_main_branch_position'])
+        # Trunk below the last branch point builds the prior milestone.
+        floor = max((
+            int(d['chromium_main_branch_position']) for d in revisions
+            if int(d['milestone']) < milestone), default=0)
 
-        while True:
+        while revision > floor:
             logger.debug(f'Trying revision {revision} ... ')
             chromium_zip = f'{revision}-chrome-{self.browser_zip(revision)}.zip'
             chromium_url = urljoin(CHROME_BROWSER_SNAPSHOT_REPO, 'o', (
@@ -157,6 +199,9 @@ class SmartChromeContextManager(SmartContextManager):
             if status_code == 200:
                 break
             revision -= 1
+        else:
+            raise ValueError(
+                f'No {self.browser_platform} Chromium snapshot for milestone {milestone}')
 
         logger.debug(f'Chromedriver version {version} supports chromium {release=} {revision=}')
         return release, parse(str(revision))

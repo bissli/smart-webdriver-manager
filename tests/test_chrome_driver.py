@@ -1,6 +1,8 @@
 import glob
+import json
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -9,7 +11,7 @@ from asserts import assert_true
 from smart_webdriver_manager import ChromeDriverManager
 from smart_webdriver_manager.context import SmartChromeContextManager
 from smart_webdriver_manager.utils import mktempdir
-from util import run_chrome_helper
+from util import put_fake_driver, run_chrome_helper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('==>')
@@ -209,6 +211,103 @@ def test_cached_driver_skips_network(tempdir):
         driver_path_2 = cdm2.get_driver()
         mock_release.assert_not_called()
     assert_equal(driver_path_1, driver_path_2)
+
+
+@pytest.fixture
+def chrome_endpoints(monkeypatch):
+    """Stub the release and milestone endpoints: stable is 155, 157 is newest.
+    """
+    driver_releases = {
+        'LATEST_RELEASE_STABLE': '155.0.8059.79',
+        'LATEST_RELEASE_155': '155.0.8059.80',
+        'LATEST_RELEASE_158': '158.0.8104.0',
+        }
+    milestones = [
+        {'milestone': 157, 'chromium_main_branch_position': 1717349},
+        {'milestone': 156, 'chromium_main_branch_position': 1706539},
+        {'milestone': 155, 'chromium_main_branch_position': 1697595},
+        {'milestone': 154, 'chromium_main_branch_position': 1697000},
+        ]
+
+    def fake_get(url):
+        name = url.rsplit('/', 1)[-1]
+        if name in driver_releases:
+            return SimpleNamespace(status_code=200, text=driver_releases[name])
+        content = json.dumps(milestones).encode()
+        return SimpleNamespace(status_code=200, content=content)
+
+    monkeypatch.setattr('requests.get', fake_get)
+    monkeypatch.setattr('requests.head', lambda url: SimpleNamespace(status_code=200))
+
+
+@pytest.mark.parametrize('version', [0, None])
+def test_latest_browser_matches_stable_driver_milestone(
+        version, tempdir, chrome_endpoints):
+    """Verify latest pairs Chromium with the stable driver's milestone.
+
+    Mutation: taking the newest branched milestone for latest, or comparing
+    None with an int in the cache check.
+    Oracle: stubbed milestones 157/156/155 and stable driver 155.x.
+    """
+    cx = SmartChromeContextManager(base_path=tempdir)
+    release, revision = cx.get_browser_release(version)
+    assert_equal(str(release), '155.0.8059.79')
+    assert_equal(str(revision), '1697595')
+
+
+def test_browser_release_follows_cached_driver(chrome_endpoints):
+    """Verify a fresh manager pairs Chromium with the cached driver release.
+
+    Mutation: resolving the browser release from the latest patch when a
+    driver of that major is cached.
+    Oracle: cached .79 against a stubbed latest patch of .80.
+    """
+    with mktempdir() as base_path:
+        cdm = ChromeDriverManager(base_path=base_path, version=155)
+        put_fake_driver(cdm._cx._driver_cache, '155.0.8059.79')
+        release, _ = cdm._cx.get_browser_release(155)
+        assert_equal(str(release), '155.0.8059.79')
+
+
+def test_unbranched_milestone_raises_value_error(tempdir, chrome_endpoints):
+    """Verify a driver version with no branched Chromium raises ValueError.
+
+    Mutation: indexing the filtered milestones without an empty check.
+    Oracle: stubbed driver 158 against milestones that stop at 157.
+    """
+    cx = SmartChromeContextManager(base_path=tempdir)
+    with pytest.raises(ValueError):
+        cx.get_browser_release(158)
+
+
+def test_snapshot_search_stops_at_prior_milestone(
+        tempdir, chrome_endpoints, monkeypatch):
+    """Verify the snapshot search raises before reaching the prior milestone.
+
+    Mutation: an unbounded search, which returns a milestone 154 build.
+    Oracle: snapshots stubbed only at or below 154's branch position.
+    """
+    def fake_head(url):
+        revision = int(url.split('%2F')[1])
+        return SimpleNamespace(status_code=200 if revision <= 1697000 else 404)
+
+    monkeypatch.setattr('requests.head', fake_head)
+    cx = SmartChromeContextManager(base_path=tempdir)
+    with pytest.raises(ValueError):
+        cx.get_browser_release(0)
+
+
+def test_remove_driver_removes_cached_release(chrome_endpoints):
+    """Verify remove_driver removes the cached release, not the latest patch.
+
+    Mutation: looking up the latest patch release in place of the cache.
+    Oracle: cached .79 against a stubbed latest patch of .80.
+    """
+    with mktempdir() as base_path:
+        cdm = ChromeDriverManager(base_path=base_path, version=155)
+        put_fake_driver(cdm._cx._driver_cache, '155.0.8059.79')
+        cdm.remove_driver()
+        assert_equal(cdm._cx._driver_cache.find_release_for_version(155), None)
 
 
 if __name__ == '__main__':

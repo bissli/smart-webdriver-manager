@@ -1,10 +1,13 @@
 import time
+import zipfile
+from pathlib import Path
 
 import backoff
 from selenium import webdriver
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from smart_webdriver_manager.utils import mktempdir
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=30)
@@ -23,3 +26,14 @@ def run_chrome_helper(driver_path, browser_path, user_data_dir):
     finally:
         driver.quit()
     time.sleep(3)
+
+
+def put_fake_driver(cache, release):
+    """Cache a zip that unpacks to a subfolder, as Chrome for Testing zips do.
+    """
+    with mktempdir() as src_dir:
+        zip_path = Path(src_dir, 'chromedriver-linux64.zip')
+        with zipfile.ZipFile(zip_path, 'w') as archive:
+            archive.writestr('chromedriver-linux64/chromedriver', b'')
+            archive.writestr('chromedriver-linux64/LICENSE.chromedriver', b'')
+        return cache.put(zip_path, release)
