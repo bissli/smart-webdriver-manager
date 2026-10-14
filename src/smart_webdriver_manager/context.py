@@ -73,6 +73,7 @@ CHROME_BROWSER_SNAPSHOT_REPO = urljoin('https://www.googleapis.com/',
                                        'chromium-browser-snapshots')
 CHROMEDRIVER_114_AND_BELOW_REPO = 'https://chromedriver.storage.googleapis.com/'
 CHROMEDRIVER_115_AND_ABOVE_REPO = 'https://googlechromelabs.github.io/chrome-for-testing/'
+MAC_ARM_FIRST_SNAPSHOT = 882387
 CHROMEDRIVER_115_AND_ABOVE_REPO_DL ='https://storage.googleapis.com/chrome-for-testing-public/'
 
 
@@ -184,6 +185,8 @@ class SmartChromeContextManager(SmartContextManager):
         floor = max((
             int(d['chromium_main_branch_position']) for d in revisions
             if int(d['milestone']) < milestone), default=0)
+        if self.browser_platform == 'Mac_Arm':
+            floor = max(floor, MAC_ARM_FIRST_SNAPSHOT - 1)
 
         while revision > floor:
             logger.debug(f'Trying revision {revision} ... ')

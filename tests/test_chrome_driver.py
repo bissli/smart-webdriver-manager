@@ -221,12 +221,15 @@ def chrome_endpoints(monkeypatch):
         'LATEST_RELEASE_STABLE': '155.0.8059.79',
         'LATEST_RELEASE_155': '155.0.8059.80',
         'LATEST_RELEASE_158': '158.0.8104.0',
+        'LATEST_RELEASE_88': '88.0.4324.96',
         }
     milestones = [
         {'milestone': 157, 'chromium_main_branch_position': 1717349},
         {'milestone': 156, 'chromium_main_branch_position': 1706539},
         {'milestone': 155, 'chromium_main_branch_position': 1697595},
         {'milestone': 154, 'chromium_main_branch_position': 1697000},
+        {'milestone': 88, 'chromium_main_branch_position': 827102},
+        {'milestone': 87, 'chromium_main_branch_position': 812852},
         ]
 
     def fake_get(url):
@@ -295,6 +298,28 @@ def test_snapshot_search_stops_at_prior_milestone(
     cx = SmartChromeContextManager(base_path=tempdir)
     with pytest.raises(ValueError):
         cx.get_browser_release(0)
+
+
+def test_mac_arm_search_skips_revisions_before_first_snapshot(
+        tempdir, chrome_endpoints, monkeypatch):
+    """Verify Mac_Arm raises at once for a milestone older than its snapshots.
+
+    Mutation: searching Mac_Arm down to the prior milestone's branch point.
+    Oracle: milestone 88 branches below the first Mac_Arm snapshot, 882387,
+    so no HEAD request is needed.
+    """
+    probed = []
+
+    def fake_head(url):
+        probed.append(url)
+        return SimpleNamespace(status_code=404)
+
+    monkeypatch.setattr('platform.system', lambda: 'Darwin')
+    monkeypatch.setattr('requests.head', fake_head)
+    cx = SmartChromeContextManager(base_path=tempdir)
+    with pytest.raises(ValueError):
+        cx.get_browser_release(88)
+    assert_equal(probed, [])
 
 
 def test_remove_driver_removes_cached_release(chrome_endpoints):

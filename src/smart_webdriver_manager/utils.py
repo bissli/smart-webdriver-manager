@@ -36,13 +36,13 @@ class LinuxZipFileWithPermissions(zipfile.ZipFile):
 def unpack_zip(zip_path):
     """Unzip zip to same diretory"""
     zip_class = zipfile.ZipFile if platform.system() == 'Windows' else LinuxZipFileWithPermissions
-    archive = zip_class(zip_path)
-    try:
-        archive.extractall(Path(zip_path).parent)
-    except OSError as e:
-        if e.errno not in {errno.ETXTBSY, errno.EACCES}:
-            raise
-    return archive.namelist()
+    with zip_class(zip_path) as archive:
+        try:
+            archive.extractall(Path(zip_path).parent)
+        except OSError as e:
+            if e.errno not in {errno.ETXTBSY, errno.EACCES}:
+                raise
+        return archive.namelist()
 
 
 @contextmanager
